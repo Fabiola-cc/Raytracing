@@ -72,10 +72,6 @@ impl Framebuffer {
         Some((self.data[index], self.data[index + 1], self.data[index + 2]))
     }
 
-    pub fn render_buffer(&self, filename: &str) -> std::io::Result<()> {
-        crate::bmp::write_bmp_file(filename, &self.data, self.width, self.height)
-    }
-
     fn hex_to_rgb(hex: u32) -> (u8, u8, u8) {
         (
             ((hex >> 16) & 0xFF) as u8,

@@ -1,5 +1,6 @@
 use nalgebra_glm::{dot, Vec3};
 use crate::color::Color;
+use crate::materials::Material;
 
 pub struct Sphere {
     pub center: Vec3,
@@ -42,11 +43,6 @@ impl RayIntersect for Sphere {
             Intersect::empty()
         }
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Material {
-    pub diffuse: Color,
 }
 
 #[derive(Debug, Clone, Copy)]

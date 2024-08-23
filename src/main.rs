@@ -1,14 +1,15 @@
 mod framebuffer;
-mod bmp;
 mod ray_intersect;
 mod color;
+mod materials;
 
 use std::time::Duration;
 use minifb::{Key, Window, WindowOptions};
 use crate::framebuffer::Framebuffer;
 use nalgebra_glm::{Vec3, normalize};
-use crate::ray_intersect::{Sphere, Material, RayIntersect, Intersect};
+use crate::ray_intersect::{Sphere, RayIntersect, Intersect};
 use crate::color::Color;
+use crate::materials::Material;
 
 pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Sphere]) -> Color {
     let mut intersect = Intersect:: empty( );
