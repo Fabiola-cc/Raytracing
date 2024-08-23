@@ -19,6 +19,10 @@ use crate::camera::Camera;
 mod light;
 use crate::light::Light;
 
+fn reflect(incident: &Vec3, normal: &Vec3) -> Vec3 {
+    incident - 2.0 * incident.dot(normal) * normal
+}
+
 pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Sphere], light: &Light) -> Color {
     let mut intersect = Intersect::empty( );
     let mut zbuffer = INFINITY; // what is the closest element this ray has hit?
@@ -37,12 +41,16 @@ pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Sphere], lig
     }
         
     let light_dir = (light.position - intersect.point).normalize();
-    //let view_dir = (ray_origin - intersect.point).normalize();
+    let view_dir = (ray_origin - intersect.point).normalize();
+    let reflect_dir = reflect(&-light_dir, &intersect.normal);
 
-    let diffuse_intensity = intersect.normal.dot(&light_dir);
-    let diffuse = intersect.material.diffuse * diffuse_intensity * light.intensity;
+    let diffuse_intensity = intersect.normal.dot(&light_dir).max(0.0).min(1.0);
+    let diffuse = intersect.material.diffuse * intersect.material.albedo[0] * diffuse_intensity * light.intensity;
 
-    diffuse
+    let specular_intensity = view_dir.dot(&reflect_dir).max(0.0).powf(intersect.material.specular);
+    let specular = light.color * intersect.material.albedo[1] * specular_intensity * light.intensity;
+
+    diffuse + specular
 }
 
 fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera, light: &Light) {
@@ -76,11 +84,15 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera, li
 
 
 fn main() {
-    let ivory = Material {
-        diffuse: Color::new(147, 151, 153),
-    };
     let rubber = Material {
         diffuse: Color::new(140, 43, 24),
+        specular: 1.0,
+        albedo: [0.9, 0.1],
+    };
+    let ivory = Material {
+        diffuse: Color::new(147, 151, 153),
+        specular: 50.0,
+        albedo: [0.6, 0.3],
     };
 
     let objects = [
@@ -104,7 +116,7 @@ fn main() {
 
     let mut light = Light::new(
         Vec3::new(-5.0, 5.0, 5.0),
-        Color::new(255, 0, 0),
+        Color::new(255, 255, 255),
         1.0,
     );
 
@@ -124,10 +136,10 @@ fn main() {
     while window.is_open() && !window.is_key_down(Key::Escape) {
         //CAMERA ORBIT CONTROLS
         if window.is_key_down(Key :: Left) {
-            camera.orbit(-rotation_speed, 0.0);
+            camera.orbit(rotation_speed, 0.0);
         }   
         if window.is_key_down(Key :: Right) {
-            camera.orbit(rotation_speed, 0.0);
+            camera.orbit(-rotation_speed, 0.0);
         }   
         if window.is_key_down(Key :: Up) {
             camera.orbit(0.0, -rotation_speed);

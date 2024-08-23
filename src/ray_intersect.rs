@@ -30,9 +30,7 @@ impl Intersect {
             normal: Vec3::zeros(),
             distance: 0.0,
             is_intersecting: false,
-            material: Material {
-                diffuse: Color::new(0, 0, 0),
-            },
+            material: Material::black(),
         }
     }
 }
