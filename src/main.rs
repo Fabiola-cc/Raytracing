@@ -1,19 +1,24 @@
-mod framebuffer;
-mod ray_intersect;
-mod color;
-mod materials;
-
-use std::time::Duration;
 use minifb::{Key, Window, WindowOptions};
-use crate::framebuffer::Framebuffer;
+use std::time::Duration;
 use nalgebra_glm::{Vec3, normalize};
-use crate::ray_intersect::{Sphere, RayIntersect, Intersect};
+use std::f32::INFINITY;
+
+mod framebuffer;
+use crate::framebuffer::Framebuffer;
+mod ray_intersect;
+use crate::ray_intersect::{RayIntersect, Intersect};
+mod color;
 use crate::color::Color;
+mod sphere;
+use crate::sphere::Sphere;
+mod materials;
 use crate::materials::Material;
+mod camera;
+use crate::camera::Camera;
 
 pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Sphere]) -> Color {
-    let mut intersect = Intersect:: empty( );
-    let mut zbuffer = f32 :: INFINITY; // what is the closest element this ray has hit?
+    let mut intersect = Intersect::empty( );
+    let mut zbuffer = INFINITY; // what is the closest element this ray has hit?
     
     for object in objects {
        let tmp = object.ray_intersect(ray_origin, ray_direction);
@@ -26,15 +31,13 @@ pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Sphere]) -> 
     if !intersect.is_intersecting {
         // return default sky box color
         return Color :: new(4, 12, 36);
-        
     }
         
-        let diffuse = intersect.material.diffuse;
-        
-        diffuse
+    let diffuse = intersect.material.diffuse;    
+    diffuse
 }
 
-fn render(framebuffer: &mut Framebuffer, objects: &[Sphere]) {
+fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera) {
     let width = framebuffer.width as f32;
     let height = framebuffer.height as f32;
     let aspect_ratio = width / height;
@@ -52,7 +55,11 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere]) {
             let ray_direction = normalize(&Vec3::new(screen_x, screen_y, -1.0));
 
             // Cast the ray and get the pixel color
-            let pixel_color = cast_ray(&Vec3::new(0.0, 0.0, 0.0), &ray_direction, objects);
+            let origin = &Vec3::new(0.0, 0.0, 5.0);
+
+            let rotated_direction = camera.basis_change(&ray_direction);
+
+            let pixel_color = cast_ray(origin, &rotated_direction, objects);
 
             framebuffer.set_current_color(pixel_color);
             framebuffer.point(x as f32, y as f32);
@@ -62,103 +69,49 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere]) {
 
 
 fn main() {
-    let white = Material {
+    let ivory = Material {
         diffuse: Color::new(255, 255, 255),
     };
-    let brown = Material {
-        diffuse: Color::new(112, 65, 39),
-    };
-    let black = Material {
-        diffuse: Color::new(0,0,0),
+    let rubber = Material {
+        diffuse: Color::new(140, 43, 24),
     };
 
     let objects = [
-        //EYES
         Sphere {
-            center: Vec3::new(-0.38, 0.40, -3.0),
-            radius: 0.05,
-            material: white,
+            center: Vec3::new(-0.2, 0.0, 2.0),
+            radius: 0.2,
+            material: ivory,
         },
         Sphere {
-            center: Vec3::new(0.22, 0.40, -3.0),
-            radius: 0.05,
-            material: white,
+            center: Vec3::new(0.0, 0.0, 0.0),
+            radius: 1.0,
+            material: rubber
         },
-        Sphere {
-            center: Vec3::new(-0.30, 0.35, -3.0),
-            radius: 0.15,
-            material: black,
-        },
-        Sphere {
-            center: Vec3::new(0.30, 0.35, -3.0),
-            radius: 0.15,
-            material: black,
-        },
-        //NOSE
-        Sphere {
-            center: Vec3::new(0.0, 0.05, -3.0),
-            radius: 0.17,
-            material: black,
-        },
-        Sphere {
-            center: Vec3::new(0.0, -0.35, -3.0),
-            radius: 0.60,
-            material: white,
-        },
-        //HEAD
-        Sphere {
-            center: Vec3::new(0.0, 0.0, -4.0),
-            radius: 1.5,
-            material: brown,
-        },
-        //EARS
-        Sphere {
-            center: Vec3::new(-0.80, 0.80, -3.0),
-            radius: 0.22,
-            material: white,
-        },
-        Sphere {
-            center: Vec3::new(0.80, 0.80, -3.0),
-            radius: 0.22,
-            material: white,
-        },
-        Sphere {
-            center: Vec3::new(-0.80, 0.80, -3.0),
-            radius: 0.40,
-            material: brown,
-        },
-        Sphere {
-            center: Vec3::new(0.80, 0.80, -3.0),
-            radius: 0.40,
-            material: brown,
-        },
-        
     ];
 
+    let mut camera = Camera::new(
+        Vec3::new(0.0, -3.0, 5.5),
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(0.0, 1.0, 0.0),
+    );
+
     let mut framebuffer = Framebuffer::new(800, 600);
-    render(&mut framebuffer, &objects);
 
     let mut window = Window::new(
-        "Bear",
+        "Raytracing",
         framebuffer.width,
         framebuffer.height,
         WindowOptions::default(),
-    )
-    .unwrap_or_else(|e| {
+    ).unwrap_or_else(|e| {
         panic!("{}", e);
     });
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        // Convierte el buffer de `Vec<u8>` a `Vec<u32>`
-        let mut buffer_u32 = vec![0u32; framebuffer.width * framebuffer.height];
-        for (i, chunk) in framebuffer.data.chunks_exact(3).enumerate() {
-            let r = chunk[0] as u32;
-            let g = chunk[1] as u32;
-            let b = chunk[2] as u32;
-            buffer_u32[i] = (255 << 24) | (r << 16) | (g << 8) | b;
-        }
+        framebuffer.clear();
+        
+        render(&mut framebuffer, &objects, &mut camera);
 
         // Actualiza la ventana con el buffer
-    window.update_with_buffer(&buffer_u32, framebuffer.width, framebuffer.height).unwrap();
+        window.update_with_buffer(&framebuffer.to_u32_buffer(), framebuffer.width, framebuffer.height).unwrap();
     }
 }
