@@ -2,6 +2,7 @@ use minifb::{Key, Window, WindowOptions};
 use std::time::Duration;
 use nalgebra_glm::{Vec3, normalize};
 use std::f32::INFINITY;
+use std::f32::consts::PI;
 
 mod framebuffer;
 use crate::framebuffer::Framebuffer;
@@ -41,6 +42,8 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera) {
     let width = framebuffer.width as f32;
     let height = framebuffer.height as f32;
     let aspect_ratio = width / height;
+    let fov = PI/3.0;
+    let perspective_scale = (fov / 2.0).tan();
 
     for y in 0..framebuffer.height {
         for x in 0..framebuffer.width {
@@ -49,17 +52,14 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera) {
             let screen_y = -(2.0 * y as f32) / height + 1.0;
 
             // Adjust for aspect ratio
-            let screen_x = screen_x * aspect_ratio;
+            let screen_x = screen_x * aspect_ratio * perspective_scale;
+            let screen_y = screen_y * perspective_scale;
 
             // Calculate the direction of the ray for this pixel
             let ray_direction = normalize(&Vec3::new(screen_x, screen_y, -1.0));
 
-            // Cast the ray and get the pixel color
-            let origin = &Vec3::new(0.0, 0.0, 5.0);
-
             let rotated_direction = camera.basis_change(&ray_direction);
-
-            let pixel_color = cast_ray(origin, &rotated_direction, objects);
+            let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects);
 
             framebuffer.set_current_color(pixel_color);
             framebuffer.point(x as f32, y as f32);
@@ -70,7 +70,7 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera) {
 
 fn main() {
     let ivory = Material {
-        diffuse: Color::new(255, 255, 255),
+        diffuse: Color::new(0, 0, 0),
     };
     let rubber = Material {
         diffuse: Color::new(140, 43, 24),
@@ -78,7 +78,7 @@ fn main() {
 
     let objects = [
         Sphere {
-            center: Vec3::new(-0.2, 0.0, 2.0),
+            center: Vec3::new(-3.0, 0.0, 2.0),
             radius: 0.2,
             material: ivory,
         },
@@ -90,7 +90,7 @@ fn main() {
     ];
 
     let mut camera = Camera::new(
-        Vec3::new(0.0, -3.0, 5.5),
+        Vec3::new(0.0, 0.0, 5.0),
         Vec3::new(0.0, 0.0, 0.0),
         Vec3::new(0.0, 1.0, 0.0),
     );
@@ -106,7 +106,23 @@ fn main() {
         panic!("{}", e);
     });
 
+    let rotation_speed = PI/10.0;
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
+        //CAMERA ORBIT CONTROLS
+        if window.is_key_down(Key :: Left) {
+            camera.orbit(rotation_speed, 0.0);
+        }   
+        if window.is_key_down(Key :: Right) {
+            camera.orbit(-rotation_speed, 0.0);
+        }   
+        if window.is_key_down(Key :: Up) {
+            camera.orbit(0.0, -rotation_speed);
+        }
+        if window.is_key_down(Key :: Down) {
+            camera.orbit(0.0, rotation_speed);
+        }
+        
         framebuffer.clear();
         
         render(&mut framebuffer, &objects, &mut camera);
