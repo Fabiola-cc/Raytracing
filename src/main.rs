@@ -16,8 +16,10 @@ mod materials;
 use crate::materials::Material;
 mod camera;
 use crate::camera::Camera;
+mod light;
+use crate::light::Light;
 
-pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Sphere]) -> Color {
+pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Sphere], light: &Light) -> Color {
     let mut intersect = Intersect::empty( );
     let mut zbuffer = INFINITY; // what is the closest element this ray has hit?
     
@@ -34,11 +36,16 @@ pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Sphere]) -> 
         return Color :: new(4, 12, 36);
     }
         
-    let diffuse = intersect.material.diffuse;    
+    let light_dir = (light.position - intersect.point).normalize();
+    //let view_dir = (ray_origin - intersect.point).normalize();
+
+    let diffuse_intensity = intersect.normal.dot(&light_dir);
+    let diffuse = intersect.material.diffuse * diffuse_intensity * light.intensity;
+
     diffuse
 }
 
-fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera) {
+fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera, light: &Light) {
     let width = framebuffer.width as f32;
     let height = framebuffer.height as f32;
     let aspect_ratio = width / height;
@@ -59,7 +66,7 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera) {
             let ray_direction = normalize(&Vec3::new(screen_x, screen_y, -1.0));
 
             let rotated_direction = camera.basis_change(&ray_direction);
-            let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects);
+            let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects, light);
 
             framebuffer.set_current_color(pixel_color);
             framebuffer.point(x as f32, y as f32);
@@ -70,7 +77,7 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera) {
 
 fn main() {
     let ivory = Material {
-        diffuse: Color::new(0, 0, 0),
+        diffuse: Color::new(147, 151, 153),
     };
     let rubber = Material {
         diffuse: Color::new(140, 43, 24),
@@ -78,8 +85,8 @@ fn main() {
 
     let objects = [
         Sphere {
-            center: Vec3::new(-3.0, 0.0, 2.0),
-            radius: 0.2,
+            center: Vec3::new(-1.5, 0.0, 1.0),
+            radius: 0.5,
             material: ivory,
         },
         Sphere {
@@ -93,6 +100,12 @@ fn main() {
         Vec3::new(0.0, 0.0, 5.0),
         Vec3::new(0.0, 0.0, 0.0),
         Vec3::new(0.0, 1.0, 0.0),
+    );
+
+    let mut light = Light::new(
+        Vec3::new(-5.0, 5.0, 5.0),
+        Color::new(255, 0, 0),
+        1.0,
     );
 
     let mut framebuffer = Framebuffer::new(800, 600);
@@ -111,10 +124,10 @@ fn main() {
     while window.is_open() && !window.is_key_down(Key::Escape) {
         //CAMERA ORBIT CONTROLS
         if window.is_key_down(Key :: Left) {
-            camera.orbit(rotation_speed, 0.0);
+            camera.orbit(-rotation_speed, 0.0);
         }   
         if window.is_key_down(Key :: Right) {
-            camera.orbit(-rotation_speed, 0.0);
+            camera.orbit(rotation_speed, 0.0);
         }   
         if window.is_key_down(Key :: Up) {
             camera.orbit(0.0, -rotation_speed);
@@ -125,7 +138,7 @@ fn main() {
         
         framebuffer.clear();
         
-        render(&mut framebuffer, &objects, &mut camera);
+        render(&mut framebuffer, &objects, &mut camera, &mut light);
 
         // Actualiza la ventana con el buffer
         window.update_with_buffer(&framebuffer.to_u32_buffer(), framebuffer.width, framebuffer.height).unwrap();

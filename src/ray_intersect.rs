@@ -6,6 +6,8 @@ use crate::sphere::Sphere;
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
 pub struct Intersect {
+    pub point: Vec3,
+    pub normal: Vec3,
     pub distance: f32,
     pub is_intersecting: bool,
     pub material: Material,
@@ -14,6 +16,8 @@ pub struct Intersect {
 impl Intersect {
     pub fn new(point: Vec3, normal: Vec3, distance: f32, material: Material) -> Self {
         Intersect {
+            point,
+            normal,
             distance,
             is_intersecting: true,
             material,
@@ -22,6 +26,8 @@ impl Intersect {
 
     pub fn empty() -> Self {
         Intersect {
+            point: Vec3::zeros(),
+            normal: Vec3::zeros(),
             distance: 0.0,
             is_intersecting: false,
             material: Material {
