@@ -29,7 +29,11 @@ fn cast_shadow(
     objects: &[Sphere],
 ) -> f32 {
     let light_dir = (light.position - intersect.point).normalize();
-    let shadow_ray_origin = intersect.point;
+
+    // Ajusta el origen del rayo de sombra para evitar la autointersección
+    let offset = intersect.normal * 1e-4; // Pequeño valor para evitar estar dentro de la esfera
+    let shadow_ray_origin = intersect.point + offset;
+
     let mut shadow_intensity = 0.0;
 
     for object in objects {
@@ -119,8 +123,8 @@ fn main() {
 
     let objects = [
         Sphere {
-            center: Vec3::new(0.0, 0.0, 1.5),
-            radius: 0.5,
+            center: Vec3::new(0.0, 0.0, 2.5),
+            radius: 0.1,
             material: ivory,
         },
         Sphere {
