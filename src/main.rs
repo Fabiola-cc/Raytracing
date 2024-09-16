@@ -47,7 +47,16 @@ fn cast_shadow(
     shadow_intensity
 }
 
-pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Sphere], light: &Light) -> Color {
+pub fn cast_ray(
+    ray_origin: &Vec3, 
+    ray_direction: &Vec3, 
+    objects: &[Sphere], 
+    light: &Light,
+    depth: u32) -> Color {
+    if depth > 3 {
+        return Color::new(130, 189, 188);
+    }
+
     let mut intersect = Intersect::empty( );
     let mut zbuffer = INFINITY; // what is the closest element this ray has hit?
     
@@ -61,7 +70,7 @@ pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Sphere], lig
     }
     if !intersect.is_intersecting {
         // return default sky box color
-        return Color :: new(4, 12, 36);
+        return Color::new(130, 189, 188);
     }
         
     let light_dir = (light.position - intersect.point).normalize();
@@ -76,7 +85,17 @@ pub fn cast_ray(ray_origin: &Vec3, ray_direction: &Vec3, objects: &[Sphere], lig
     let specular_intensity = view_dir.dot(&reflect_dir).max(0.0).powf(intersect.material.specular);
     let specular = light.color * intersect.material.albedo[1] * specular_intensity * light_intensity;
 
-    diffuse + specular
+    let mut reflect_color = Color::new(0, 0, 0);
+    let reflectivity = intersect.material.reflectivity;
+
+    if reflectivity > 0.0 {
+        let reflect_dir = reflect(&-ray_direction, &intersect.normal).normalize();
+        let epsilon = 1e-4; // Pequeño desplazamiento
+        let reflect_origin = intersect.point + intersect.normal * epsilon; // Origen ajustado
+        reflect_color = cast_ray(&reflect_origin, &reflect_dir, objects, light, depth + 1);
+    }
+
+    (diffuse + specular) * (1.0 - reflectivity) + (reflect_color * reflectivity)
 }
 
 fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera, light: &Light) {
@@ -105,7 +124,7 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera, li
                     let ray_direction = normalize(&Vec3::new(screen_x, screen_y, -1.0));
 
                     let rotated_direction = camera.basis_change(&ray_direction);
-                    let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects, light);
+                    let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects, light, 0);
 
                     (x, y, pixel_color) // Devolvemos las coordenadas y el color del píxel
                 })
@@ -125,11 +144,13 @@ fn main() {
         diffuse: Color::new(140, 43, 24),
         specular: 1.0,
         albedo: [0.9, 0.1],
+        reflectivity: 0.0,
     };
     let ivory = Material {
         diffuse: Color::new(147, 151, 153),
         specular: 50.0,
         albedo: [0.6, 0.3],
+        reflectivity: 0.6,
     };
 
     let objects = [

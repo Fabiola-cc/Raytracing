@@ -5,6 +5,7 @@ pub struct Material {
     pub diffuse: Color,
     pub specular: f32,
     pub albedo: [f32; 2],
+    pub reflectivity: f32,
 }
 
 impl Material {
@@ -12,9 +13,10 @@ impl Material {
         diffuse: Color, 
         specular: f32, 
         albedo: [f32; 2],
+        reflectivity: f32,
     ) -> Self {
         Material {
-            diffuse, specular, albedo
+            diffuse, specular, albedo, reflectivity
         }
     }
 
@@ -23,6 +25,7 @@ impl Material {
             diffuse: Color::new(0,0,0),
             specular: 0.0,
             albedo: [0.0, 0.0],
+            reflectivity: 0.0,
         }
     }
 }
