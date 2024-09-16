@@ -47,7 +47,33 @@ fn cast_shadow(
     shadow_intensity
 }
 
-pub fn cast_ray(
+fn refract(incident: &Vec3, normal: &Vec3, eta_t: f32) -> Vec3 {
+    let cosi = -incident.dot(normal).max(-1.0).min(1.0);
+    
+    let (n_cosi, eta, n_normal);
+    
+    if cosi < 0.0 {
+        n_cosi = -cosi;
+        eta = 1.0 / eta_t;
+        n_normal = -normal;
+    } else {
+        // Ray is leaving the object
+        n_cosi = cosi;
+        eta = eta_t;
+        n_normal = *normal;
+    }
+    
+    let k = 1.0 - eta * eta * (1.0 - n_cosi * n_cosi);
+    
+    if k < 0.0 {
+        // Total internal reflection
+        reflect(incident, &n_normal)
+    } else {
+        eta * incident + (eta * n_cosi - k.sqrt( )) * n_normal
+    }
+}
+
+fn cast_ray(
     ray_origin: &Vec3, 
     ray_direction: &Vec3, 
     objects: &[Sphere], 
@@ -85,7 +111,7 @@ pub fn cast_ray(
     let specular_intensity = view_dir.dot(&reflect_dir).max(0.0).powf(intersect.material.specular);
     let specular = light.color * intersect.material.albedo[1] * specular_intensity * light_intensity;
 
-    let mut reflect_color = Color::new(0, 0, 0);
+    let mut reflect_color = Color::black();
     let reflectivity = intersect.material.reflectivity;
 
     if reflectivity > 0.0 {
@@ -95,7 +121,16 @@ pub fn cast_ray(
         reflect_color = cast_ray(&reflect_origin, &reflect_dir, objects, light, depth + 1);
     }
 
-    (diffuse + specular) * (1.0 - reflectivity) + (reflect_color * reflectivity)
+    let mut refract_color = Color::black();
+    let transparency = intersect.material.transparency;
+    if transparency > 0.0 {
+        let epsilon = 1e-4; // Pequeño desplazamiento
+        let refract_dir = refract(&ray_direction, &intersect.normal, intersect.material.refraction_index);
+        let refract_origin = intersect.point + intersect.normal * epsilon; // Origen ajustado
+        refract_color = cast_ray(&refract_origin, &refract_dir, objects, light, depth + 1);
+    }
+
+    (diffuse + specular) * (1.0 - reflectivity - transparency) + (reflect_color * reflectivity) + (refract_color * transparency)
 }
 
 fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera, light: &Light) {
@@ -145,24 +180,41 @@ fn main() {
         specular: 1.0,
         albedo: [0.9, 0.1],
         reflectivity: 0.0,
+        transparency: 0.0,
+        refraction_index: 0.0,
     };
     let ivory = Material {
         diffuse: Color::new(147, 151, 153),
         specular: 50.0,
         albedo: [0.6, 0.3],
         reflectivity: 0.6,
+        transparency: 0.0,
+        refraction_index: 0.0,
+    };
+    let glass = Material {
+        diffuse: Color::new(255, 255, 255),
+        specular: 1450.0,
+        albedo: [0.0, 1.0],
+        reflectivity: 0.4,
+        transparency: 0.6,
+        refraction_index: 1.3,
     };
 
     let objects = [
         Sphere {
-            center: Vec3::new(0.0, 0.0, 2.5),
-            radius: 0.1,
+            center: Vec3::new(-1.0, -1.0, 1.5),
+            radius: 0.5,
             material: ivory,
         },
         Sphere {
             center: Vec3::new(0.0, 0.0, 0.0),
             radius: 1.0,
             material: rubber
+        },
+        Sphere {
+            center: Vec3::new(-0.3, 0.3, 2.5),
+            radius: 0.5,
+            material: glass
         },
     ];
 

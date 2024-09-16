@@ -20,6 +20,14 @@ impl Color {
         }
     }
 
+    pub fn black() -> Color {
+        Color {
+            red: 0 as u8,
+            green: 0 as u8,
+            blue: 0 as u8,
+        }
+    }
+
     // Método para crear una instancia de Color a partir de un valor hexadecimal
     pub fn from_hex(hex: u32) -> Color {
         Color {
