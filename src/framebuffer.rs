@@ -1,5 +1,4 @@
 use std::fmt;
-use nalgebra_glm::Vec2;
 use crate::color::Color;
 
 #[derive(Debug)]
@@ -60,26 +59,7 @@ impl Framebuffer {
         self.data[index + 1] = g;
         self.data[index + 2] = b;
     }
-
-    pub fn get_pixel(&self, x: isize, y: isize) -> Option<(u8, u8, u8)> {
-        if x < 0 || y < 0 || x >= self.width as isize || y >= self.height as isize {
-            return None;
-        }
-        let x = x as usize;
-        let y = y as usize;
-        //let flipped_y = self.height - 1 - y;  // Invertir el valor de y
-        let index = (y * self.width + x) * 3;
-        Some((self.data[index], self.data[index + 1], self.data[index + 2]))
-    }
-
-    fn hex_to_rgb(hex: u32) -> (u8, u8, u8) {
-        (
-            ((hex >> 16) & 0xFF) as u8,
-            ((hex >> 8) & 0xFF) as u8,
-            (hex & 0xFF) as u8,
-        )
-    }
-
+    
     pub fn to_u32_buffer(&self) -> Vec<u32> {
         let mut buffer = vec![0; self.width * self.height];
         for y in 0..self.height {
@@ -94,39 +74,6 @@ impl Framebuffer {
         buffer
     }
 
-    pub fn draw_line(&mut self, start: Vec2, end: Vec2) {
-        let x1 = start.x.round() as isize;
-        let y1 = start.y.round() as isize;
-        let x2 = end.x.round() as isize;
-        let y2 = end.y.round() as isize;
-
-        let dx = (x2 - x1).abs();
-        let sx = if x1 < x2 { 1 } else { -1 };
-        let dy = -(y2 - y1).abs();
-        let sy = if y1 < y2 { 1 } else { -1 };
-        let mut err = dx + dy;
-
-        let mut x = x1;
-        let mut y = y1;
-
-        loop {
-            self.point(x as f32, y as f32);
-
-            if x == x2 && y == y2 {
-                break;
-            }
-
-            let e2 = 2 * err;
-            if e2 >= dy {
-                err += dy;
-                x += sx;
-            }
-            if e2 <= dx {
-                err += dx;
-                y += sy;
-            }
-        }
-    }    
 }
 
 impl fmt::Display for Framebuffer {
@@ -139,51 +86,5 @@ impl fmt::Display for Framebuffer {
             writeln!(f)?;
         }
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_framebuffer_creation() {
-        let fb = Framebuffer::new(10, 10);
-        assert_eq!(fb.width, 10);
-        assert_eq!(fb.height, 10);
-        assert_eq!(fb.data.len(), 300); // 10 * 10 * 3
-    }
-
-    #[test]
-    fn test_set_get_pixel() {
-        let mut fb = Framebuffer::new(10, 10);
-        fb.set_pixel(5, 5, 255, 0, 0);
-        let pixel = fb.get_pixel(5, 5);
-        assert_eq!(pixel, Some((255, 0, 0)));
-
-        let out_of_bounds_pixel = fb.get_pixel(15, 15);
-        assert_eq!(out_of_bounds_pixel, None);
-    }
-
-    #[test]
-    fn test_color() {
-        let mut fb = Framebuffer::new(10, 10);
-        fb.set_current_color(0xffee00);
-        assert_eq!(fb.current_color, (255, 238, 0));
-    }
-
-    #[test]
-    fn test_clear() {
-        let mut fb = Framebuffer::new(10, 10);
-        fb.set_background_color(0xFF0000);
-        fb.clear();
-        assert_eq!(fb.get_pixel(0, 0), Some((0, 0, 0)));
-        assert_eq!(fb.get_pixel(9, 9), Some((0, 0, 0)));
-    }
-
-    #[test]
-    fn test_set_background_color() {
-        let mut fb = Framebuffer::new(10, 10);
-        fb.set_background_colo
     }
 }

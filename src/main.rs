@@ -1,23 +1,23 @@
+use rayon::prelude::*; // Importa Rayon para paralelismo
 use minifb::{Key, Window, WindowOptions};
-use std::time::Duration;
 use nalgebra_glm::{Vec3, normalize};
 use std::f32::INFINITY;
 use std::f32::consts::PI;
+use crate::framebuffer::Framebuffer;
+use crate::ray_intersect::{RayIntersect, Intersect};
+use crate::color::Color;
+use crate::sphere::Sphere;
+use crate::materials::Material;
+use crate::camera::Camera;
+use crate::light::Light;
 
 mod framebuffer;
-use crate::framebuffer::Framebuffer;
 mod ray_intersect;
-use crate::ray_intersect::{RayIntersect, Intersect};
 mod color;
-use crate::color::Color;
 mod sphere;
-use crate::sphere::Sphere;
 mod materials;
-use crate::materials::Material;
 mod camera;
-use crate::camera::Camera;
 mod light;
-use crate::light::Light;
 
 fn reflect(incident: &Vec3, normal: &Vec3) -> Vec3 {
     incident - 2.0 * incident.dot(normal) * normal
@@ -83,31 +83,42 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera, li
     let width = framebuffer.width as f32;
     let height = framebuffer.height as f32;
     let aspect_ratio = width / height;
-    let fov = PI/3.0;
+    let fov = PI / 3.0;
     let perspective_scale = (fov / 2.0).tan();
 
-    for y in 0..framebuffer.height {
-        for x in 0..framebuffer.width {
-            // Map the pixel coordinate to screen space [-1, 1]
-            let screen_x = (2.0 * x as f32) / width - 1.0;
-            let screen_y = -(2.0 * y as f32) / height + 1.0;
+    // Creamos una referencia mutable a framebuffer para usar en el closure de renderizado paralelo
+    let pixels: Vec<(usize, usize, Color)> = (0..framebuffer.height)
+        .into_par_iter() // Iteramos en paralelo sobre las filas
+        .flat_map(|y| {
+            (0..framebuffer.width)
+                .into_par_iter() // Iteramos en paralelo sobre las columnas
+                .map(move |x| {
+                    // Map the pixel coordinate to screen space [-1, 1]
+                    let screen_x = (2.0 * x as f32) / width - 1.0;
+                    let screen_y = -(2.0 * y as f32) / height + 1.0;
 
-            // Adjust for aspect ratio
-            let screen_x = screen_x * aspect_ratio * perspective_scale;
-            let screen_y = screen_y * perspective_scale;
+                    // Adjust for aspect ratio
+                    let screen_x = screen_x * aspect_ratio * perspective_scale;
+                    let screen_y = screen_y * perspective_scale;
 
-            // Calculate the direction of the ray for this pixel
-            let ray_direction = normalize(&Vec3::new(screen_x, screen_y, -1.0));
+                    // Calculate the direction of the ray for this pixel
+                    let ray_direction = normalize(&Vec3::new(screen_x, screen_y, -1.0));
 
-            let rotated_direction = camera.basis_change(&ray_direction);
-            let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects, light);
+                    let rotated_direction = camera.basis_change(&ray_direction);
+                    let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects, light);
 
-            framebuffer.set_current_color(pixel_color);
-            framebuffer.point(x as f32, y as f32);
-        }
+                    (x, y, pixel_color) // Devolvemos las coordenadas y el color del píxel
+                })
+                .collect::<Vec<_>>() // Colectamos los píxeles en un vector
+        })
+        .collect();
+
+    // Asignamos los colores calculados al framebuffer
+    for (x, y, color) in pixels {
+        framebuffer.set_current_color(color);
+        framebuffer.point(x as f32, y as f32);
     }
 }
-
 
 fn main() {
     let rubber = Material {
@@ -175,7 +186,8 @@ fn main() {
         }
         
         framebuffer.clear();
-        
+        framebuffer.set_background_color(Color::new(25, 20, 2));
+
         render(&mut framebuffer, &objects, &mut camera, &mut light);
 
         // Actualiza la ventana con el buffer

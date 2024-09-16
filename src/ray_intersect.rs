@@ -1,7 +1,5 @@
-use nalgebra_glm::{dot, Vec3};
-use crate::color::Color;
+use nalgebra_glm::Vec3;
 use crate::materials::Material;
-use crate::sphere::Sphere;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
