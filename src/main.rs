@@ -18,6 +18,7 @@ mod sphere;
 mod materials;
 mod camera;
 mod light;
+mod textures;
 
 fn reflect(incident: &Vec3, normal: &Vec3) -> Vec3 {
     incident - 2.0 * incident.dot(normal) * normal
@@ -102,18 +103,19 @@ fn cast_ray(
     let light_dir = (light.position - intersect.point).normalize();
     let view_dir = (ray_origin - intersect.point).normalize();
     let reflect_dir = reflect(&-light_dir, &intersect.normal);
+
     let shadow_intensity = cast_shadow(&intersect, light, objects);
     let light_intensity = light.intensity * (1.0 - shadow_intensity);
 
     let diffuse_intensity = intersect.normal.dot(&light_dir).max(0.0).min(1.0);
-    let diffuse = intersect.material.diffuse * intersect.material.albedo[0] * diffuse_intensity * light_intensity;
+    let diffuse_color = intersect.material.get_diffuse_color(intersect.u, intersect.v); /////
+    let diffuse = diffuse_color * intersect.material.albedo[0] * diffuse_intensity * light_intensity;
 
     let specular_intensity = view_dir.dot(&reflect_dir).max(0.0).powf(intersect.material.specular);
     let specular = light.color * intersect.material.albedo[1] * specular_intensity * light_intensity;
 
     let mut reflect_color = Color::black();
     let reflectivity = intersect.material.reflectivity;
-
     if reflectivity > 0.0 {
         let reflect_dir = reflect(&-ray_direction, &intersect.normal).normalize();
         let epsilon = 1e-4; // Pequeño desplazamiento
@@ -175,30 +177,27 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera, li
 }
 
 fn main() {
-    let rubber = Material {
-        diffuse: Color::new(140, 43, 24),
-        specular: 1.0,
-        albedo: [0.9, 0.1],
-        reflectivity: 0.0,
-        transparency: 0.0,
-        refraction_index: 0.0,
-    };
-    let ivory = Material {
-        diffuse: Color::new(147, 151, 153),
-        specular: 50.0,
-        albedo: [0.6, 0.3],
-        reflectivity: 0.6,
-        transparency: 0.0,
-        refraction_index: 0.0,
-    };
-    let glass = Material {
-        diffuse: Color::new(255, 255, 255),
-        specular: 1450.0,
-        albedo: [0.0, 1.0],
-        reflectivity: 0.4,
-        transparency: 0.6,
-        refraction_index: 1.3,
-    };
+    let rubber = Material::new_with_texture(
+        1.0,
+        [0.9, 0.1],
+        0.0,
+    );
+    let ivory = Material::new(
+        Color::new(147, 151, 153),
+        50.0,
+        [0.6, 0.3],
+        0.6,
+        0.0,
+        0.0,
+    );
+    let glass = Material::new(
+        Color::new(255, 255, 255),
+        1450.0,
+        [0.0, 1.0],
+        0.4,
+        0.6,
+        1.3,   
+    );
 
     let objects = [
         Sphere {
@@ -214,7 +213,7 @@ fn main() {
         Sphere {
             center: Vec3::new(-0.3, 0.3, 2.5),
             radius: 0.5,
-            material: glass
+            material: ivory
         },
     ];
 
@@ -241,7 +240,9 @@ fn main() {
         panic!("{}", e);
     });
 
-    let rotation_speed = PI/10.0;
+    let rotation_speed = PI/50.0;
+    framebuffer.clear();
+    framebuffer.set_background_color(Color::new(25, 20, 2));
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         //CAMERA ORBIT CONTROLS
@@ -257,13 +258,13 @@ fn main() {
         if window.is_key_down(Key :: Down) {
             camera.orbit(0.0, rotation_speed);
         }
-        
-        framebuffer.clear();
-        framebuffer.set_background_color(Color::new(25, 20, 2));
-
-        render(&mut framebuffer, &objects, &mut camera, &mut light);
+        if camera.is_changed() {
+            // Render the scene
+            render(&mut framebuffer, &objects, &camera, &light);
+        }
 
         // Actualiza la ventana con el buffer
-        window.update_with_buffer(&framebuffer.to_u32_buffer(), framebuffer.width, framebuffer.height).unwrap();
+        window.update_with_buffer(&framebuffer.to_u32_buffer(), framebuffer.width, framebuffer.height)
+        .unwrap();
     }
 }

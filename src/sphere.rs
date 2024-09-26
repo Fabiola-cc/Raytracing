@@ -1,11 +1,29 @@
 use crate::materials::Material;
 use nalgebra_glm::{Vec3, dot};
 use crate::ray_intersect::{RayIntersect, Intersect};
+use std::f32::consts::PI;
 
 pub struct Sphere {
     pub center: Vec3,
     pub radius: f32,
     pub material: Material,
+}
+
+impl Sphere {
+    fn get_uv(&self, point: &Vec3) -> (f32, f32){
+        // Calculate the normalized point relative to the sphere's center
+        let normalized = (*point - self.center) / self.radius;
+
+        // Convert to spherical coordinates
+        let theta = (-normalized.y).acos();
+        let phi = (-normalized.z).atan2(normalized.x) + PI;
+
+        // Map to UV coordinates
+        let u = phi / (2.0 * PI);
+        let v = theta / PI;
+
+        (u, v)
+    }
 }
 
 impl RayIntersect for Sphere {
@@ -37,8 +55,8 @@ impl RayIntersect for Sphere {
             // Calcular el punto de intersección y la normal
             let intersection_point = ray_origin + ray_direction * t;
             let normal = (intersection_point - self.center).normalize();
-            
-            Intersect::new(intersection_point, normal, t, self.material)
+            let (u, v) = self.get_uv(&intersection_point);
+            Intersect::new(intersection_point, normal, t, self.material, u, v)
         } else {
             Intersect::empty()
         }

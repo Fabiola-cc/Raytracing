@@ -4,6 +4,7 @@ pub struct Camera {
     pub eye: Vec3,
     pub center: Vec3,
     pub up: Vec3,
+    has_changed: bool,
 }
 
 const PITCH_LIMIT: f32 = PI / 2.0 - 0.1;
@@ -14,6 +15,7 @@ impl Camera {
             eye,
             center,
             up,
+            has_changed: true,
         }
     }
 
@@ -27,7 +29,7 @@ impl Camera {
             vector.y * up -
             vector.z * forward;
     
-        rotated // Eliminamos la normalización final
+        rotated
     }    
 
     pub fn orbit(&mut self, delta_yaw: f32, delta_pitch: f32) {
@@ -49,7 +51,14 @@ impl Camera {
         );
 
         self.eye = new_eye;
+        self.has_changed = true;
     }
 
-    
+    pub fn is_changed(&mut self) -> bool {
+        if self.has_changed {
+            self.has_changed = false;
+            return true;
+        }
+        false
+    }
 }
