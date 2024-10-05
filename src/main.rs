@@ -6,10 +6,10 @@ use std::f32::consts::PI;
 use crate::framebuffer::Framebuffer;
 use crate::ray_intersect::{RayIntersect, Intersect};
 use crate::color::Color;
-use crate::sphere::Sphere;
 use crate::materials::Material;
 use crate::camera::Camera;
 use crate::light::Light;
+use crate::cube::Cube;
 
 mod framebuffer;
 mod ray_intersect;
@@ -19,6 +19,7 @@ mod materials;
 mod camera;
 mod light;
 mod textures;
+mod cube;
 
 fn reflect(incident: &Vec3, normal: &Vec3) -> Vec3 {
     incident - 2.0 * incident.dot(normal) * normal
@@ -27,12 +28,12 @@ fn reflect(incident: &Vec3, normal: &Vec3) -> Vec3 {
 fn cast_shadow(
     intersect: &Intersect,
     light: &Light,
-    objects: &[Sphere],
+    objects: &[Cube],
 ) -> f32 {
     let light_dir = (light.position - intersect.point).normalize();
 
     // Ajusta el origen del rayo de sombra para evitar la autointersección
-    let offset = intersect.normal * 1e-4; // Pequeño valor para evitar estar dentro de la esfera
+    let offset = intersect.normal * 1e-4; // Pequeño valor para evitar estar dentro del cubo
     let shadow_ray_origin = intersect.point + offset;
 
     let mut shadow_intensity = 0.0;
@@ -77,29 +78,30 @@ fn refract(incident: &Vec3, normal: &Vec3, eta_t: f32) -> Vec3 {
 fn cast_ray(
     ray_origin: &Vec3, 
     ray_direction: &Vec3, 
-    objects: &[Sphere], 
+    objects: &[Cube], // Cambiado a Cube
     light: &Light,
     depth: u32) -> Color {
+    
     if depth > 3 {
         return Color::new(130, 189, 188);
     }
 
-    let mut intersect = Intersect::empty( );
-    let mut zbuffer = INFINITY; // what is the closest element this ray has hit?
+    let mut intersect = Intersect::empty();
+    let mut zbuffer = INFINITY; // el objeto más cercano golpeado por el rayo
     
+    // Verificamos la intersección del rayo con los cubos
     for object in objects {
-       let tmp = object.ray_intersect(ray_origin, ray_direction);
-        if tmp.is_intersecting &&
-            tmp.distance < zbuffer { // is this distance less than the previous?
-            zbuffer = intersect.distance; // this is the closest
+        let tmp = object.ray_intersect(ray_origin, ray_direction);
+        if tmp.is_intersecting && tmp.distance < zbuffer {
+            zbuffer = tmp.distance;
             intersect = tmp;
-            }
+        }
     }
+
     if !intersect.is_intersecting {
-        // return default sky box color
-        return Color::new(130, 189, 188);
+        return Color::new(130, 189, 188); // color de fondo
     }
-        
+
     let light_dir = (light.position - intersect.point).normalize();
     let view_dir = (ray_origin - intersect.point).normalize();
     let reflect_dir = reflect(&-light_dir, &intersect.normal);
@@ -108,7 +110,7 @@ fn cast_ray(
     let light_intensity = light.intensity * (1.0 - shadow_intensity);
 
     let diffuse_intensity = intersect.normal.dot(&light_dir).max(0.0).min(1.0);
-    let diffuse_color = intersect.material.get_diffuse_color(intersect.u, intersect.v); /////
+    let diffuse_color = intersect.material.get_diffuse_color(intersect.u, intersect.v);
     let diffuse = diffuse_color * intersect.material.albedo[0] * diffuse_intensity * light_intensity;
 
     let specular_intensity = view_dir.dot(&reflect_dir).max(0.0).powf(intersect.material.specular);
@@ -116,17 +118,20 @@ fn cast_ray(
 
     let mut reflect_color = Color::black();
     let reflectivity = intersect.material.reflectivity;
+
+    // Corrige el problema de "acné" en cubos utilizando un pequeño desplazamiento `epsilon`
+    let epsilon = 1e-4; // Ajuste para evitar el acné
+    let reflect_origin = intersect.point + intersect.normal * epsilon; // Origen ajustado para evitar reintersección
+    
     if reflectivity > 0.0 {
         let reflect_dir = reflect(&-ray_direction, &intersect.normal).normalize();
-        let epsilon = 1e-4; // Pequeño desplazamiento
-        let reflect_origin = intersect.point + intersect.normal * epsilon; // Origen ajustado
         reflect_color = cast_ray(&reflect_origin, &reflect_dir, objects, light, depth + 1);
     }
 
     let mut refract_color = Color::black();
     let transparency = intersect.material.transparency;
+
     if transparency > 0.0 {
-        let epsilon = 1e-4; // Pequeño desplazamiento
         let refract_dir = refract(&ray_direction, &intersect.normal, intersect.material.refraction_index);
         let refract_origin = intersect.point + intersect.normal * epsilon; // Origen ajustado
         refract_color = cast_ray(&refract_origin, &refract_dir, objects, light, depth + 1);
@@ -135,41 +140,35 @@ fn cast_ray(
     (diffuse + specular) * (1.0 - reflectivity - transparency) + (reflect_color * reflectivity) + (refract_color * transparency)
 }
 
-fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera, light: &Light) {
+fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera, light: &Light) {
     let width = framebuffer.width as f32;
     let height = framebuffer.height as f32;
     let aspect_ratio = width / height;
     let fov = PI / 3.0;
     let perspective_scale = (fov / 2.0).tan();
 
-    // Creamos una referencia mutable a framebuffer para usar en el closure de renderizado paralelo
     let pixels: Vec<(usize, usize, Color)> = (0..framebuffer.height)
         .into_par_iter() // Iteramos en paralelo sobre las filas
         .flat_map(|y| {
             (0..framebuffer.width)
                 .into_par_iter() // Iteramos en paralelo sobre las columnas
                 .map(move |x| {
-                    // Map the pixel coordinate to screen space [-1, 1]
                     let screen_x = (2.0 * x as f32) / width - 1.0;
                     let screen_y = -(2.0 * y as f32) / height + 1.0;
 
-                    // Adjust for aspect ratio
                     let screen_x = screen_x * aspect_ratio * perspective_scale;
                     let screen_y = screen_y * perspective_scale;
 
-                    // Calculate the direction of the ray for this pixel
                     let ray_direction = normalize(&Vec3::new(screen_x, screen_y, -1.0));
-
                     let rotated_direction = camera.basis_change(&ray_direction);
                     let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects, light, 0);
 
-                    (x, y, pixel_color) // Devolvemos las coordenadas y el color del píxel
+                    (x, y, pixel_color)
                 })
-                .collect::<Vec<_>>() // Colectamos los píxeles en un vector
+                .collect::<Vec<_>>()
         })
         .collect();
 
-    // Asignamos los colores calculados al framebuffer
     for (x, y, color) in pixels {
         framebuffer.set_current_color(color);
         framebuffer.point(x as f32, y as f32);
@@ -177,43 +176,20 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Sphere], camera: &Camera, li
 }
 
 fn main() {
-    let rubber = Material::new_with_texture(
-        1.0,
-        [0.9, 0.1],
-        0.0,
-    );
-    let ivory = Material::new(
-        Color::new(147, 151, 153),
+    let cube_material = Material::new(
+        Color::new(255, 0, 0),
         50.0,
         [0.6, 0.3],
         0.6,
         0.0,
         0.0,
     );
-    let glass = Material::new(
-        Color::new(255, 255, 255),
-        1450.0,
-        [0.0, 1.0],
-        0.4,
-        0.6,
-        1.3,   
-    );
-
+    
     let objects = [
-        Sphere {
-            center: Vec3::new(-1.0, -1.0, 1.5),
-            radius: 0.5,
-            material: ivory,
-        },
-        Sphere {
-            center: Vec3::new(0.0, 0.0, 0.0),
-            radius: 1.0,
-            material: rubber
-        },
-        Sphere {
-            center: Vec3::new(-0.3, 0.3, 2.5),
-            radius: 0.5,
-            material: ivory
+        Cube {
+            min: Vec3::new(-2.5, 2.64, 0.0),
+            max: Vec3::new(-0.36, -0.51, 2.63),
+            material: cube_material,
         },
     ];
 
@@ -223,8 +199,8 @@ fn main() {
         Vec3::new(0.0, 1.0, 0.0),
     );
 
-    let mut light = Light::new(
-        Vec3::new(0.0, 0.0, 5.0),
+    let light = Light::new(
+        Vec3::new(0.0, 3.0, 5.0),
         Color::new(255, 255, 255),
         1.0,
     );
