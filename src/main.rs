@@ -6,7 +6,7 @@ use std::f32::consts::PI;
 use crate::framebuffer::Framebuffer;
 use crate::ray_intersect::{RayIntersect, Intersect};
 use crate::color::Color;
-use crate::materials::Material;
+use crate::materials::{Material, TextureManager};
 use crate::camera::Camera;
 use crate::light::Light;
 use crate::cube::Cube;
@@ -80,7 +80,8 @@ fn cast_ray(
     ray_direction: &Vec3, 
     objects: &[Cube], 
     light: &Light,
-    depth: u32) -> Color {
+    depth: u32,
+    texture_manager: &TextureManager) -> Color {
     
     if depth > 3 {
         return Color::new(130, 189, 188);
@@ -110,7 +111,7 @@ fn cast_ray(
     let light_intensity = light.intensity * (1.0 - shadow_intensity);
 
     let diffuse_intensity = intersect.normal.dot(&light_dir).max(0.0).min(1.0);
-    let diffuse_color = intersect.material.get_diffuse_color(intersect.u, intersect.v);
+    let diffuse_color = intersect.material.get_diffuse_color(intersect.u, intersect.v, &texture_manager);
     let diffuse = diffuse_color * intersect.material.albedo[0] * diffuse_intensity * light_intensity;
 
     let specular_intensity = view_dir.dot(&reflect_dir).max(0.0).powf(intersect.material.specular);
@@ -125,7 +126,7 @@ fn cast_ray(
     
     if reflectivity > 0.0 {
         let reflect_dir = reflect(&-ray_direction, &intersect.normal).normalize();
-        reflect_color = cast_ray(&reflect_origin, &reflect_dir, objects, light, depth + 1);
+        reflect_color = cast_ray(&reflect_origin, &reflect_dir, objects, light, depth + 1, &texture_manager);
     }
 
     let mut refract_color = Color::black();
@@ -134,14 +135,14 @@ fn cast_ray(
     if transparency > 0.0 {
         let refract_dir = refract(&ray_direction, &intersect.normal, intersect.material.refraction_index);
         let refract_origin = intersect.point + intersect.normal * epsilon; // Origen ajustado
-        refract_color = cast_ray(&refract_origin, &refract_dir, objects, light, depth + 1);
+        refract_color = cast_ray(&refract_origin, &refract_dir, objects, light, depth + 1, &texture_manager);
     }
 
     (diffuse + specular) * (1.0 - reflectivity - transparency) + (reflect_color * reflectivity) + (refract_color * transparency)
 }
 
 
-fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera, light: &Light) {
+fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera, light: &Light, texture_manager: &TextureManager) {
     let width = framebuffer.width as f32;
     let height = framebuffer.height as f32;
     let aspect_ratio = width / height;
@@ -162,7 +163,7 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera, ligh
 
                     let ray_direction = normalize(&Vec3::new(screen_x, screen_y, -1.0));
                     let rotated_direction = camera.basis_change(&ray_direction);
-                    let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects, light, 0);
+                    let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects, light, 0, &texture_manager);
 
                     (x, y, pixel_color)
                 })
@@ -177,29 +178,28 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera, ligh
 }
 
 fn main() {
-    let soil_material = Material::new(
-        Color::new(46, 21, 5),
+    let mut texture_manager = TextureManager::new();
+    let wood_texture_index = texture_manager.load_texture("assets/wood.png");
+    let leaf_texture_index = texture_manager.load_texture("assets/leaves.png");
+    let grass_texture_index = texture_manager.load_texture("assets/grass.jpg");
+
+    let soil_material = Material::new_with_texture(
+        grass_texture_index,
         50.0,
         [0.6, 0.3],
         0.6,
-        0.0,
-        0.0,
     );
-    let tree_material = Material::new(
-        Color::new(82, 43, 16),
+    let tree_material = Material::new_with_texture(
+        wood_texture_index,
         50.0,
         [0.6, 0.3],
         0.6,
-        0.0,
-        0.0,
     );
-    let leaf_material = Material::new(
-        Color::new(27, 92, 44),
+    let leaf_material = Material::new_with_texture(
+        leaf_texture_index,
         50.0,
         [0.6, 0.3],
         0.6,
-        0.0,
-        0.0,
     );
     let bee_material = Material::new(
         Color::new(207, 170, 23),
@@ -337,7 +337,7 @@ fn main() {
         }
         if camera.is_changed() {
             // Render the scene
-            render(&mut framebuffer, &objects, &camera, &light);
+            render(&mut framebuffer, &objects, &camera, &light, &texture_manager);
         }
 
         // Actualiza la ventana con el buffer
