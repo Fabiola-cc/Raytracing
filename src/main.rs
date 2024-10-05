@@ -184,12 +184,18 @@ fn main() {
         0.0,
         0.0,
     );
-    
+    let texture_material = Material::new_with_texture(10.0, [0.6, 0.3], 1.0);
+
     let objects = [
         Cube {
-            min: Vec3::new(-2.5, 2.64, 0.0),
-            max: Vec3::new(-0.36, -0.51, 2.63),
-            material: cube_material,
+            min: Vec3::new(-1.0, -1.0, -1.0),
+            max: Vec3::new(1.0, 1.0, 1.0),
+            material: texture_material,
+        },
+        Cube {
+            min: Vec3::new(-1.0, 2.0, -1.0),
+            max: Vec3::new(1.0, 4.0, 1.0),
+            material: texture_material,
         },
     ];
 
@@ -217,6 +223,7 @@ fn main() {
     });
 
     let rotation_speed = PI/50.0;
+    let zoom_speed = 0.1;
     framebuffer.clear();
     framebuffer.set_background_color(Color::new(25, 20, 2));
 
@@ -233,6 +240,13 @@ fn main() {
         }
         if window.is_key_down(Key :: Down) {
             camera.orbit(0.0, rotation_speed);
+        }
+        // camera zoom controls
+        if window.is_key_down(Key::Q) {
+            camera.zoom(zoom_speed);
+        }
+        if window.is_key_down(Key::E) {
+            camera.zoom(-zoom_speed);
         }
         if camera.is_changed() {
             // Render the scene

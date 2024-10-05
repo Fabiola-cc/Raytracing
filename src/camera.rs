@@ -54,6 +54,12 @@ impl Camera {
         self.has_changed = true;
     }
 
+    pub fn zoom(&mut self, delta: f32) {
+        let direction = (self.center - self.eye).normalize();
+        self.eye += direction * delta;
+        self.has_changed = true;
+    }
+
     pub fn is_changed(&mut self) -> bool {
         if self.has_changed {
             self.has_changed = false;
