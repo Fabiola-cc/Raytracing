@@ -78,7 +78,7 @@ fn refract(incident: &Vec3, normal: &Vec3, eta_t: f32) -> Vec3 {
 fn cast_ray(
     ray_origin: &Vec3, 
     ray_direction: &Vec3, 
-    objects: &[Cube], // Cambiado a Cube
+    objects: &[Cube], 
     light: &Light,
     depth: u32) -> Color {
     
@@ -87,7 +87,7 @@ fn cast_ray(
     }
 
     let mut intersect = Intersect::empty();
-    let mut zbuffer = INFINITY; // el objeto más cercano golpeado por el rayo
+    let mut zbuffer = INFINITY; // El objeto más cercano golpeado por el rayo
     
     // Verificamos la intersección del rayo con los cubos
     for object in objects {
@@ -99,7 +99,7 @@ fn cast_ray(
     }
 
     if !intersect.is_intersecting {
-        return Color::new(130, 189, 188); // color de fondo
+        return Color::new(130, 189, 188); // Color de fondo
     }
 
     let light_dir = (light.position - intersect.point).normalize();
@@ -119,9 +119,9 @@ fn cast_ray(
     let mut reflect_color = Color::black();
     let reflectivity = intersect.material.reflectivity;
 
-    // Corrige el problema de "acné" en cubos utilizando un pequeño desplazamiento `epsilon`
-    let epsilon = 1e-4; // Ajuste para evitar el acné
-    let reflect_origin = intersect.point + intersect.normal * epsilon; // Origen ajustado para evitar reintersección
+    // Corrige el problema de "acné" utilizando un pequeño desplazamiento `epsilon`
+    let epsilon = 1e-3; // Aumento de epsilon para evitar acné
+    let reflect_origin = intersect.point + intersect.normal * epsilon; 
     
     if reflectivity > 0.0 {
         let reflect_dir = reflect(&-ray_direction, &intersect.normal).normalize();
@@ -139,6 +139,7 @@ fn cast_ray(
 
     (diffuse + specular) * (1.0 - reflectivity - transparency) + (reflect_color * reflectivity) + (refract_color * transparency)
 }
+
 
 fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera, light: &Light) {
     let width = framebuffer.width as f32;
@@ -176,37 +177,123 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera, ligh
 }
 
 fn main() {
-    let cube_material = Material::new(
-        Color::new(255, 0, 0),
+    let soil_material = Material::new(
+        Color::new(46, 21, 5),
         50.0,
         [0.6, 0.3],
         0.6,
         0.0,
         0.0,
     );
-    let texture_material = Material::new_with_texture(10.0, [0.6, 0.3], 1.0);
+    let tree_material = Material::new(
+        Color::new(82, 43, 16),
+        50.0,
+        [0.6, 0.3],
+        0.6,
+        0.0,
+        0.0,
+    );
+    let leaf_material = Material::new(
+        Color::new(27, 92, 44),
+        50.0,
+        [0.6, 0.3],
+        0.6,
+        0.0,
+        0.0,
+    );
+    let bee_material = Material::new(
+        Color::new(207, 170, 23),
+        50.0,
+        [0.6, 0.3],
+        0.6,
+        0.0,
+        0.0,
+    );
+    let beehive_material = Material::new(
+        Color::new(133, 96, 12),
+        50.0,
+        [0.6, 0.3],
+        0.6,
+        0.0,
+        0.0,
+    );
 
     let objects = [
         Cube {
             min: Vec3::new(-1.0, -1.0, -1.0),
-            max: Vec3::new(1.0, 1.0, 1.0),
-            material: texture_material,
+            max: Vec3::new(1.0, -0.5, 1.5),
+            material: soil_material,
         },
         Cube {
-            min: Vec3::new(-1.0, 2.0, -1.0),
-            max: Vec3::new(1.0, 4.0, 1.0),
-            material: texture_material,
+            min: Vec3::new(1.0, -1.0, -1.0),
+            max: Vec3::new(1.5, 0.0, 1.5),
+            material: soil_material,
+        },
+        Cube {
+            min: Vec3::new(-1.0, -0.5, -1.0),
+            max: Vec3::new(0.0, 0.0, 0.0),
+            material: soil_material,
+        },
+        Cube {
+            min: Vec3::new(0.0, -0.5, -1.0),
+            max: Vec3::new(1.0, 0.0, 0.5),
+            material: soil_material,
+        },
+        Cube {
+            min: Vec3::new(0.5, 0.0, -0.5),
+            max: Vec3::new(1.0, 1.0, -0.0),
+            material: tree_material,
+        },
+        Cube {
+            min: Vec3::new(0.0, 1.0, -1.0),
+            max: Vec3::new(1.5, 1.5, 0.5),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(0.0, 1.5, -0.5),
+            max: Vec3::new(0.5, 2.0, 0.0),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(0.5, 1.5, -1.0),
+            max: Vec3::new(1.0, 2.0, 0.5),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(1.0, 1.5, -0.5),
+            max: Vec3::new(1.5, 2.0, 0.0),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(0.5, 2.0, -0.5),
+            max: Vec3::new(1.0, 2.5, -0.0),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(0.0, 0.5, -0.5),
+            max: Vec3::new(0.5, 1.0, -0.0),
+            material: beehive_material,
+        },
+        Cube {
+            min: Vec3::new(1.0, 1.5, 0.5),
+            max: Vec3::new(1.5, 2.0, 1.0),
+            material: bee_material,
+        },
+        Cube {
+            min: Vec3::new(-1.0, 0.25, 0.5),
+            max: Vec3::new(-0.5, 0.75, 1.0),
+            material: bee_material,
         },
     ];
 
     let mut camera = Camera::new(
-        Vec3::new(0.0, 0.0, 5.0),
+        Vec3::new(3.0, 5.0, 5.0),
         Vec3::new(0.0, 0.0, 0.0),
         Vec3::new(0.0, 1.0, 0.0),
     );
 
     let light = Light::new(
-        Vec3::new(0.0, 3.0, 5.0),
+        Vec3::new(-2.0, 3.0, 5.0),
         Color::new(255, 255, 255),
         1.0,
     );

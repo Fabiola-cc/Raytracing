@@ -9,14 +9,36 @@ pub struct Cube {
 }
 
 impl Cube {
-    // Método para obtener las coordenadas UV del cubo (puede variar por cara)
+    // Obtén las coordenadas UV para el cubo
     fn get_uv(&self, point: &Vec3) -> (f32, f32) {
-        // Coordenadas UV basadas en la cara (por simplicidad, asumimos una cara para ilustrar)
-        let u = (point.x - self.min.x) / (self.max.x - self.min.x);
-        let v = (point.y - self.min.y) / (self.max.y - self.min.y);
+        // Determina qué cara del cubo se está intersectando
+        let mut u = 0.0;
+        let mut v = 0.0;
+
+        if point.x == self.min.x { // Cara izquierda
+            u = (point.z - self.min.z) / (self.max.z - self.min.z);
+            v = (point.y - self.min.y) / (self.max.y - self.min.y);
+        } else if point.x == self.max.x { // Cara derecha
+            u = (point.z - self.min.z) / (self.max.z - self.min.z);
+            v = (point.y - self.min.y) / (self.max.y - self.min.y);
+        } else if point.y == self.min.y { // Cara inferior
+            u = (point.x - self.min.x) / (self.max.x - self.min.x);
+            v = (point.z - self.min.z) / (self.max.z - self.min.z);
+        } else if point.y == self.max.y { // Cara superior
+            u = (point.x - self.min.x) / (self.max.x - self.min.x);
+            v = (point.z - self.min.z) / (self.max.z - self.min.z);
+        } else if point.z == self.min.z { // Cara trasera
+            u = (point.x - self.min.x) / (self.max.x - self.min.x);
+            v = (point.y - self.min.y) / (self.max.y - self.min.y);
+        } else if point.z == self.max.z { // Cara delantera
+            u = (point.x - self.min.x) / (self.max.x - self.min.x);
+            v = (point.y - self.min.y) / (self.max.y - self.min.y);
+        }
+
         (u, v)
     }
 }
+
 
 impl RayIntersect for Cube {
     fn ray_intersect(&self, ray_origin: &Vec3, ray_direction: &Vec3) -> Intersect {
@@ -62,6 +84,7 @@ impl RayIntersect for Cube {
             Vec3::new(0.0, 0.0, 1.0)
         };
 
+        let normal = normal.normalize();
         // Calcular las coordenadas UV en la cara donde se dio la intersección
         let (u, v) = self.get_uv(&intersection_point);
 
