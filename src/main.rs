@@ -229,7 +229,6 @@ fn main() {
     let wood_texture_index = texture_manager.load_texture("assets/wood.png");
     let leaf_texture_index = texture_manager.load_texture("assets/leaves.png");
     let grass_texture_index = texture_manager.load_texture("assets/grass.jpg");
-    let light_texture_index = texture_manager.load_texture("assets/light.png");
     let stone_texture_index = texture_manager.load_texture("assets/stone.png");
     let brick_texture_index = texture_manager.load_texture("assets/brick.jpg");
 
@@ -251,8 +250,8 @@ fn main() {
         [0.6, 0.3],
         0.6,
     );
-    let light_material = Material::new_with_texture(
-        light_texture_index,
+    let brick_material = Material::new_with_texture(
+        brick_texture_index,
         50.0,
         [0.6, 0.3],
         0.6,
@@ -292,19 +291,99 @@ fn main() {
 
     let objects = [
         Cube {
-            min: Vec3::new(-1.0, 0.25, 0.5),
-            max: Vec3::new(-0.5, 0.75, 1.0),
+            min: Vec3::new(-2.5, -1.0, -1.5),
+            max: Vec3::new(1.5, -0.5, 0.0),
+            material: soil_material,
+        },
+        Cube {
+            min: Vec3::new(-2.5, -1.0, -0.5),
+            max: Vec3::new(-1.0, -0.5, 2.5),
+            material: soil_material,
+        },
+        Cube {
+            min: Vec3::new(1.0, -1.0, -1.0),
+            max: Vec3::new(1.5, 0.0, 2.5),
+            material: soil_material,
+        },
+        Cube {
+            min: Vec3::new(-0.5, -1.0, 0.5),
+            max: Vec3::new(0.5, -0.5, 2.0),
+            material: water_material,
+        },
+        Cube {
+            min: Vec3::new(0.5, -1.0, 0.5),
+            max: Vec3::new(1.0, -0.25, 2.0),
+            material: stone_material,
+        },
+        Cube {
+            min: Vec3::new(-1.0, -1.0, 0.0),
+            max: Vec3::new(-0.5, -0.5, 2.0),
+            material: stone_material,
+        },
+        Cube {
+            min: Vec3::new(-1.0, -1.0, 2.5),
+            max: Vec3::new(1.0, -0.5, 2.0),
+            material: stone_material,
+        },
+        Cube {
+            min: Vec3::new(-0.5, -1.0, 0.5),
+            max: Vec3::new(1.0, -0.5, 0.0),
+            material: stone_material,
+        },
+        Cube {
+            min: Vec3::new(0.0, -0.5, -1.5),
+            max: Vec3::new(1.5, 0.0, 0.0),
+            material: soil_material,
+        },
+        Cube {
+            min: Vec3::new(0.5, 0.0, -1.0),
+            max: Vec3::new(1.0, 1.0, -0.5),
             material: wood_material,
         },
         Cube {
-            min: Vec3::new(-1.0, 0.25, 1.5),
-            max: Vec3::new(-0.5, 0.75, 2.0),
+            min: Vec3::new(0.0, 1.0, -1.5),
+            max: Vec3::new(1.5, 1.5, 0.0),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(0.0, 1.5, -1.0),
+            max: Vec3::new(0.5, 2.0, -0.5),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(0.5, 1.5, -1.5),
+            max: Vec3::new(1.0, 2.0, 0.0),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(1.0, 1.5, -1.0),
+            max: Vec3::new(1.5, 2.0, -0.5),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(0.5, 2.0, -1.0),
+            max: Vec3::new(1.0, 2.5, -0.5),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(-0.85, 0.15, 0.5), //0.15 0.15 0.1
+            max: Vec3::new(-0.7, 0.3,0.65),
             material: emissive_material,
         },
         Cube {
-            min: Vec3::new(-0.5, 0.25, 1.5),
-            max: Vec3::new(0.0, 0.75, 2.0),
-            material: yellow,
+            min: Vec3::new(-0.85, -0.5, 0.5), //0.15 0.65 0.1
+            max: Vec3::new(-0.7, 0.15, 0.65),
+            material: brick_material,
+        },
+        Cube {
+            min: Vec3::new(0.70, 0.15, 1.75), //0.15 0.15 0.15
+            max: Vec3::new(0.85, 0.3,1.9),
+            material: emissive_material,
+        },
+        Cube {
+            min: Vec3::new(0.70, -0.5, 1.75), //0.15 0.65 0.15
+            max: Vec3::new(0.85, 0.15, 1.9),
+            material: brick_material,
         },
     ];
 
