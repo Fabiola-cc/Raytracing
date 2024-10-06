@@ -37,6 +37,8 @@ pub struct Material {
     pub refraction_index: f32,
     pub has_texture: bool,
     pub texture_index: Option<usize>, // Índice de la textura en TextureManager
+    pub emissive_color: Option<Color>, // Agregar color emisivo
+    pub emissive_intensity: f32,
 }
 
 impl Material {
@@ -57,7 +59,9 @@ impl Material {
             transparency, 
             refraction_index, 
             has_texture: false,
-            texture_index: None, // No hay textura asociada
+            texture_index: None, 
+            emissive_color: None,
+            emissive_intensity: 0.0,
         }
     }
 
@@ -77,6 +81,47 @@ impl Material {
             refraction_index,
             has_texture: true,
             texture_index: Some(texture_index), // Asignar el índice de la textura
+            emissive_color: None,
+            emissive_intensity: 0.0,
+        }
+    }
+
+    // Constructor con color emisivo
+    pub fn new_with_emission(
+        diffuse: Color,
+        specular: f32,
+        albedo: [f32; 2],
+        reflectivity: f32,
+        transparency: f32,
+        refraction_index: f32,
+        emissive_color: Option<Color>, 
+        emissive_intensity: f32,
+    ) -> Self {
+        Material {
+            diffuse,
+            specular,
+            albedo,
+            reflectivity,
+            transparency,
+            refraction_index,
+            has_texture: false,
+            texture_index: None, 
+            emissive_color,
+            emissive_intensity,
+        }
+    }
+
+    // Método para comprobar si es emisivo
+    pub fn is_emissive(&self) -> bool {
+        self.emissive_intensity > 0.0
+    }
+
+    // Método para obtener la luz emisiva
+    pub fn get_emission(&self) -> Color {
+        if let Some(color) = self.emissive_color {
+            color * self.emissive_intensity
+        } else {
+            Color::black() // Si no tiene color emisivo, no emite luz
         }
     }
 
@@ -102,6 +147,8 @@ impl Material {
             refraction_index: 0.0,
             has_texture: false,
             texture_index: None, // No hay textura asociada
+            emissive_color: None,
+            emissive_intensity: 0.0,
         }
     }
 }
