@@ -14,8 +14,8 @@ Este proyecto está enfocado en el trazado de rayos (ray tracing) y la represent
 - Optimización: Uso de paralelismo para renderizar la escena.
 
 
-## Instalación
-- Para usar o contribuir a este proyecto, necesitas tener Rust instalado. Puedes instalar Rust desde la página oficial: https://www.rust-lang.org/tools/install.
+## Resultado
+- Puedes ver el resultado del programa corriendo en este [enlace](https://www.canva.com/design/DAGTOSF41IE/3dfX37bYDtwAzWGtJmqDuw/watch?utm_content=DAGTOSF41IE&utm_campaign=designshare&utm_medium=link&utm_source=editor)
 
 ## Requisitos
 Rust: Versión estable (o nightly si usas características experimentales).
