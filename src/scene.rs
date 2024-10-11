@@ -1,21 +1,23 @@
 use crate::light::Light;
 use crate::color::Color;
-use nalgebra_glm::{Vec3};
+use nalgebra_glm::Vec3;
 
 pub struct Scene {
     pub time_of_day: f32, // Valor entre 0.0 (medianoche) y 1.0 (medianoche siguiente)
     pub light: Light,
+    pub cycle_duration: f32, 
 }
 
 impl Scene {
-    pub fn new() -> Self {
+    pub fn new(cycle_duration: f32) -> Self {
         Self {
             time_of_day: 0.0, // Empezar en medianoche
             light: Light {
                 position: Vec3::new(0.0, 10.0, 10.0), // Posición inicial de la luz
                 color: Color::new(255, 255, 255),     // Color inicial (luz blanca)
                 intensity: 1.0,                       // Intensidad inicial
-            }
+            },
+            cycle_duration,
         }
     }
 

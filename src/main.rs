@@ -172,6 +172,7 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera,
     let fov = PI / 3.0;
     let perspective_scale = (fov / 2.0).tan();
     
+    update_lighting(scene,delta_time);
     // Combinar la luz de la escena con las luces adicionales
     let mut all_lights = Vec::with_capacity(lights.len() + 1);
     all_lights.push(scene.light);       // Agregar la luz principal
@@ -180,6 +181,7 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera,
     let pixels: Vec<(usize, usize, Color)> = (0..framebuffer.height)
         .into_par_iter() // Iteramos en paralelo sobre las filas
         .flat_map(|y| {
+            let all_lights = all_lights.clone();
             (0..framebuffer.width)
                 .into_par_iter() // Iteramos en paralelo sobre las columnas
                 .map(move |x| {
@@ -191,7 +193,7 @@ fn render(framebuffer: &mut Framebuffer, objects: &[Cube], camera: &Camera,
 
                     let ray_direction = normalize(&Vec3::new(screen_x, screen_y, -1.0));
                     let rotated_direction = camera.basis_change(&ray_direction);
-                    let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects, &lights, 0, &texture_manager);
+                    let pixel_color = cast_ray(&camera.eye, &rotated_direction, objects, &all_lights, 0, &texture_manager);
 
                     (x, y, pixel_color)
                 })
@@ -212,17 +214,42 @@ fn calculate_delta_time(last_update: Instant) -> f32 {
     delta_time
 }
 
-fn get_bg_color(scene: &mut Scene) -> Color{
-    let mut background_color = Color::black();
-    if scene.time_of_day <= 0.25 {
-        background_color =  Color::new(135, 206, 235); // de 0 a 6 horas es de noche
-    } else if scene.time_of_day > 0.25 && scene.time_of_day < 0.75 {
-        background_color =  Color::new(255, 140, 0); // de 0 a 6 horas es de noche
-    } else if scene.time_of_day >= 0.75 {
-        background_color =  Color::new(25, 25, 112); 
-    }
-    background_color
+fn update_lighting(scene: &mut Scene, delta_time: f32) {
+    // Incrementamos el tiempo en la escena
+    scene.time_of_day += delta_time;
+
+    // Normalizamos el tiempo entre 0 y 1, donde 0 es medianoche y 1 es la próxima medianoche
+    let normalized_time = (scene.time_of_day % scene.cycle_duration) / scene.cycle_duration;
+
+    // Ajustar la posición de la luz para simular el movimiento del sol
+    let angle = normalized_time * 2.0 * PI; // Ángulo del ciclo (0 a 2pi)
+    let light_radius = 100.0; // Distancia del "sol" o luz de la escena
+
+    // La posición de la luz se moverá en un arco de 180 grados
+    scene.light.position = Vec3::new(
+        light_radius * angle.cos(),
+        light_radius * angle.sin(),
+        50.0 // Altura fija de la luz
+    );
+
+    // Cambiar el color de la luz según la hora del día
+    scene.light.color = if normalized_time < 0.5 {
+        // Amanecer o mediodía: luz más brillante (blanca)
+        Color::new(255, 255, 224) // Luz cálida y brillante
+    } else {
+        // Atardecer o noche: luz más tenue y anaranjada
+        Color::new(255, 140, 0) // Luz naranja
+    };
+
+    // Ajustamos la intensidad de la luz: más fuerte durante el día, más tenue en la noche
+    scene.light.intensity = if normalized_time < 0.5 {
+        1.0 // Plena luz del día
+    } else {
+        0.2 // Luz tenue al atardecer y noche
+    };
 }
+
+
 
 fn main() {
     let mut texture_manager = TextureManager::new();
@@ -266,9 +293,9 @@ fn main() {
         Color::new(115, 136, 255),
         50.0,
         [0.6, 0.3],
-        0.6,
+        0.8,
         0.7,
-        0.3
+        0.6
     );
     let emissive_material = Material::new_with_emission(
         Color::new(255, 150, 50),   // Color emisivo (naranja)
@@ -279,14 +306,6 @@ fn main() {
         1.0,                        // Índice de refracción
         Some(Color::new(255, 150, 50)), // Color de emisión
         1.0                         // Intensidad de emisión
-    );
-    let yellow = Material::new(
-        Color::new(255, 150, 50),
-        10.0,
-        [0.9, 0.1],                 // Albedo
-        0.0,                        // Reflectividad
-        0.0,                        // Transparencia
-        1.0, 
     );
 
     let objects = [
@@ -312,7 +331,7 @@ fn main() {
         },
         Cube {
             min: Vec3::new(0.5, -1.0, 0.5),
-            max: Vec3::new(1.0, -0.25, 2.0),
+            max: Vec3::new(1.0, -0.5, 2.0),
             material: stone_material,
         },
         Cube {
@@ -376,14 +395,44 @@ fn main() {
             material: brick_material,
         },
         Cube {
-            min: Vec3::new(0.70, 0.15, 1.75), //0.15 0.15 0.15
-            max: Vec3::new(0.85, 0.3,1.9),
+            min: Vec3::new(0.70, 0.15, 2.0), //0.15 0.15 0.15
+            max: Vec3::new(0.85, 0.3,2.15),
             material: emissive_material,
         },
         Cube {
-            min: Vec3::new(0.70, -0.5, 1.75), //0.15 0.65 0.15
-            max: Vec3::new(0.85, 0.15, 1.9),
+            min: Vec3::new(0.70, -0.5, 2.0), //0.15 0.65 0.15
+            max: Vec3::new(0.85, 0.15, 2.15),
             material: brick_material,
+        },
+        Cube {
+            min: Vec3::new(1.0, 0.0, 1.5),
+            max: Vec3::new(1.5, 1.0, 2.0),
+            material: wood_material,
+        },
+        Cube {
+            min: Vec3::new(0.5, 1.0, 1.0),
+            max: Vec3::new(2.0, 1.5, 2.5),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(0.5, 1.5, 1.5),
+            max: Vec3::new(1.0, 2.0, 2.0),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(1.0, 1.5, 1.0),
+            max: Vec3::new(1.5, 2.0, 2.5),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(1.5, 1.5, 1.5),
+            max: Vec3::new(2.0, 2.0, 2.0),
+            material: leaf_material,
+        },
+        Cube {
+            min: Vec3::new(1.0, 2.0, 1.5),
+            max: Vec3::new(1.5, 2.5, 2.0),
+            material: leaf_material,
         },
     ];
 
@@ -398,24 +447,21 @@ fn main() {
         Color::new(0, 0, 255),
         0.5,
     );
-
     let light1 = Light {
         position: Vec3::new(10.0, 10.0, 10.0),
         color: Color::new(0, 255, 0),
-        intensity: 1.0,
+        intensity: 0.3,
     };
-
     let light2 = Light {
-        position: Vec3::new(-10.0, 5.0, 10.0),
+        position: Vec3::new(-10.0, 15.0, 10.0),
         color: Color::new(255, 0, 0), // Luz roja
-        intensity: 0.7,
+        intensity: 0.4,
     };
-
-    let lights = vec![light, light1, light2];
+    let lights = vec![];
 
     let mut framebuffer = Framebuffer::new(800, 600);
     
-    let mut scene = Scene::new();     // Crear la escena
+    let mut scene = Scene::new(10.0);     // Crear la escena
     let mut last_update = Instant::now(); // Para calcular el delta_time
 
     let mut window = Window::new(
@@ -453,21 +499,11 @@ fn main() {
         if window.is_key_down(Key::E) {
             camera.zoom(-zoom_speed);
         }
-        // day light controls
-        if window.is_key_down(Key::T) {
-            scene.update_time(0.01);
-        }
-        if window.is_key_down(Key::L) {
-            scene.time_of_day = 0.5;
-        }
-        if window.is_key_down(Key::N) {
-            scene.time_of_day = 0.0;
-        }
         if camera.is_changed() {
             // Calcular el delta_time
             let delta_time = calculate_delta_time(last_update);
             last_update = Instant::now();
-
+            
             render(&mut framebuffer, &objects, &camera, &texture_manager, &lights, &mut scene, delta_time);
         }
 
