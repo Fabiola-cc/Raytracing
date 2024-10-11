@@ -35,7 +35,12 @@ Cargo: Administrador de dependencias incluido con Rust.
 ## Uso
 Una vez compilado, el motor renderizará una escena básica con iluminación y objetos 3D. Puedes modificar la escena cambiando los parámetros en el archivo de configuración o modificando directamente las fuentes de luz, objetos y texturas en el código.
 
-## Parámetros ajustables
+### Movimientos
+Puedes cambiar la perspectiva de visualización con distintas teclas:
+- "Q" hace zoom y "E" aleja
+- las flechas arriba, abajo, derecha e izquierda hacen rotar el espacio en dirección de la flecha
+
+### Parámetros ajustables
 Cámara: Ajusta la posición y dirección de la cámara para cambiar la perspectiva de la escena.
 Objetos: Puedes añadir más cubos o esferas a la escena.
 Luces: Añade o modifica las fuentes de luz en la escena, ajustando sus intensidades y colores.

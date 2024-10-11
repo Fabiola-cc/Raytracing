@@ -457,7 +457,7 @@ fn main() {
         color: Color::new(255, 0, 0), // Luz roja
         intensity: 0.4,
     };
-    let lights = vec![];
+    let lights = vec![light,light1,light2];
 
     let mut framebuffer = Framebuffer::new(800, 600);
     

@@ -35,7 +35,6 @@ pub struct Material {
     pub reflectivity: f32,
     pub transparency: f32,
     pub refraction_index: f32,
-    pub has_texture: bool,
     pub texture_index: Option<usize>, // Índice de la textura en TextureManager
     pub emissive_color: Option<Color>, // Agregar color emisivo
     pub emissive_intensity: f32,
@@ -57,8 +56,7 @@ impl Material {
             albedo, 
             reflectivity,
             transparency, 
-            refraction_index, 
-            has_texture: false,
+            refraction_index,
             texture_index: None, 
             emissive_color: None,
             emissive_intensity: 0.0,
@@ -79,7 +77,6 @@ impl Material {
             reflectivity: 0.0,
             transparency: 0.0,
             refraction_index,
-            has_texture: true,
             texture_index: Some(texture_index), // Asignar el índice de la textura
             emissive_color: None,
             emissive_intensity: 0.0,
@@ -104,7 +101,6 @@ impl Material {
             reflectivity,
             transparency,
             refraction_index,
-            has_texture: false,
             texture_index: None, 
             emissive_color,
             emissive_intensity,
@@ -145,7 +141,6 @@ impl Material {
             reflectivity: 0.0,
             transparency: 0.0, 
             refraction_index: 0.0,
-            has_texture: false,
             texture_index: None, // No hay textura asociada
             emissive_color: None,
             emissive_intensity: 0.0,
