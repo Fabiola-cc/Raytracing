@@ -23,8 +23,8 @@ Cargo: Administrador de dependencias incluido con Rust.
 
 ### Pasos de instalación
 - Clona el repositorio:
-`git clone https://github.com/tu-usuario/nombre-del-proyecto.git`
-`cd nombre-del-proyecto`
+`git clone [https://github.com/tu-usuario/nombre-del-proyecto.git](https://github.com/Fabiola-cc/Raytracing/)`
+`cd Raytracing`
 - Compila y ejecuta el proyecto:
 `cargo run`
 
